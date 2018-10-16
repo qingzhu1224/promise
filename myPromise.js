@@ -82,3 +82,92 @@ p.then(val => {
 })
 
 
+
+
+const PENDING = Symbol();
+const FULFILLED = Symbol();
+const REJECTED = Symbol();
+function MyPromise(fn){
+    if(typeof fn !== 'function') throw new Error('fn must be a function');
+    let state = PENDING;
+    let value = null;
+    function fulfill(result) {
+        state = FULFILLED;
+        fn(result);
+    }
+    function reject(result) {
+        state = REJECTED;
+        fn(result);
+    }
+
+    function resolve(result) {
+        try{
+            fulfill(result)
+        } catch(err) {
+            reject(err)
+        }
+    }
+    fn(resolve, reject);
+}
+
+// 实现.then
+
+const PENDING = Symbol();
+const FULFILLED = Symbol();
+const REJECTED = Symbol();
+function MyPromise(fn){
+    if(typeof fn !== 'function') throw new Error('fn must be a function');
+    let state = PENDING;
+    let value = null;
+    let handler = {};
+    function fulfill(result) {
+        state = FULFILLED;
+        value = result;
+        next(handler)
+    }
+
+    function reject(error) {
+        state = REJECTED;
+        value = error;
+        next(handler)
+    }
+
+    function resolve(result) {
+        try{
+            fulfill(result)
+        } catch(err) {
+            reject(err)
+        }
+    }
+
+    function next({onFulfill, onReject}) {
+        switch(state) {
+            case FULFILLED:
+                onFulfill&&onFulfill(value);
+                break;
+            case REJECTED:
+                onReject&&onReject(value);
+                break;
+            case PENDING:
+                handler = { onFulfill, onReject };
+        }
+    }
+
+    this.then = function(onFulfill, onReject) {
+        // then的链式调用
+        return new MyPromise((resolve, reject) => {
+            next({
+                onFulfill: val => {
+                    resolve(onFulfill(value))
+                },
+                onReject: err => {
+                    reject(onReject(err))
+                }
+            })
+        })
+    }
+    fn(resolve, reject);
+}
+
+
+
